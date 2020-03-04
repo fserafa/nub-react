@@ -1,17 +1,27 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import Axios from 'axios';
-import { Layout, Menu, Breadcrumb, Icon, Table, Button } from 'antd';
+import { Layout, Menu, Table, Button, Select, Row, Col, Card, Badge } from 'antd';
 import { Skeleton } from 'antd';
+import { DragDropContext, Draggable, Droppable } from 'react-beautiful-dnd';
 
+const { Option } = Select;
 const { SubMenu } = Menu;
 const { Header, Content, Sider } = Layout;
 
-const _ = require('lodash');
-
 export default function Fatura(props) {
-    const [fatura, setFatura] = useState('')
-    const [bar, setBar] = useState('')
-    const [loading, setLoading] = useState(true)
+    const [fatura, setFatura] = useState('');
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        (async () => {
+            const id = props.location.state.id;
+
+            const { data } = await Axios.get(`http://localhost:3333/fatura/${id}`);
+
+            setFatura(data.texts);
+            setLoading(false);
+        })();
+    }, [])
 
     const columns = [
         {
@@ -29,148 +39,295 @@ export default function Fatura(props) {
             dataIndex: 'value',
             key: 'value',
         },
+        {
+            title: 'De',
+            dataIndex: 'de',
+            key: 'de',
+            render: (text, record, index) => (
+                <>
+                    <Select defaultValue="" value={record.de} style={{ width: 120 }} allowClear onChange={(value) => handleSelectChange(record, index, value)}>
+                        <Option value="mae">Mãe</Option>
+                        <Option value="felipe">Felipe</Option>
+                    </Select>
+                </>
+            )
+        },
     ];
 
-    useEffect(() => {
-        async function getById() {
-            const id = props.location.state.id;
-
-            const { data } = await Axios.get(`http://localhost:3333/fatura/${id}`);
-
-            formatData(data);
-        }
-
-
-        getById();
-    }, [])
-
-    function formatData(data) {
-        let chunked = _.chunk(data.texts, 3);
-        let formated = [];
-
-        chunked.map(data => {
-            data[2] = parseFloat(data[2])
-        });
-
-        console.log(chunked)
-        chunked.map((chunk, index) => {
-            let obj = {};
-            let keys = ['date', 'name', 'value']
-
-            keys.map((key, i) => {
-                _.updateWith(obj, [key], _.constant(chunked[index][i]), Object);
-            })
-            formated = [...formated, obj];
-        })
-
-        setFatura(formated.slice(1));
-        setLoading(false);
+    function handleSelectChange(record, index, value) {
+        let indexOf = fatura.indexOf(record)
+        let _fatura = [...fatura]
+        _fatura[indexOf].de = value;
+        setFatura(_fatura)
     }
 
-    function teste() {
-        let foo = [];
+    function calc(_fatura = []) {
+        if (_fatura.length === 0) return 0;
+        let values = [];
 
-        fatura.map(f => {
-            foo = [...foo, f.value]
-            console.log(foo.reduce((a, b) => a + b));
+        _fatura.map(f => {
+            values = [...values, f.value]
         })
-        console.log(foo)
 
+        return (values.reduce((a, b) => a + b) / 100);
+    }
 
+    function onDragEnd(result) {
+        const { source, destination } = result;
+
+        // dropped outside the list
+        if (!destination) {
+            return;
+        }
+        console.log(source, destination)
+
+        // let indexOf = fatura.indexOf(record)
+        let _fatura = [...fatura]
+        _fatura[source.index].fiador = destination.droppableId === 'droppableContent1' ? 'mae' : 'felipe';
+        setFatura(_fatura)
+
+        // const sourceClone = Array.from('droppableContent1')
+        // const destClone = Array.from('droppableContent2')
+        // const [removed] = sourceClone.splice(source.index, 1);
+
+        // destClone.splice(destination.index, 0, removed);
+
+        // let foo = {};
+        // foo[source.droppableId] = sourceClone;
+        // foo[destination.droppableId] = destClone;
+
+        // console.log(foo)
+
+        // if (source.droppableId === destination.droppableId) {
+        //     const items = reorder(
+        //         this.getList(source.droppableId),
+        //         source.index,
+        //         destination.index
+        //     );
+
+        //     let state = { items };
+
+        //     if (source.droppableId === 'droppable2') {
+        //         state = { selected: items };
+        //     }
+
+        //     this.setState(state);
+        // } else {
+        //     const result = move(
+        //         this.getList(source.droppableId),
+        //         this.getList(destination.droppableId),
+        //         source,
+        //         destination
+        //     );
+
+        //     this.setState({
+        //         items: result.droppable,
+        //         selected: result.droppable2
+        //     });
+        // }
     }
 
     return (
-
         <Layout>
-            <Header className="header">
-                <div className="logo" />
-                <Menu
-                    theme="dark"
-                    mode="horizontal"
-                    defaultSelectedKeys={['2']}
-                    style={{ lineHeight: '64px' }}
-                >
-                    <Menu.Item key="1">nav 1</Menu.Item>
-                    <Menu.Item key="2">nav 2</Menu.Item>
-                    <Menu.Item key="3">nav 3</Menu.Item>
-                </Menu>
-            </Header>
-            <Layout>
-                <Sider width={200} style={{ background: '#fff' }}>
-                    <Menu
-                        mode="inline"
-                        defaultSelectedKeys={['1']}
-                        defaultOpenKeys={['sub1']}
-                        style={{ height: '100%', borderRight: 0 }}
-                    >
-                        <SubMenu
-                            key="sub1"
-                            title={
-                                <span>
-                                    <Icon type="user" />
-                                    subnav 1
-              </span>
-                            }
-                        >
-                            <Menu.Item key="1">option1</Menu.Item>
-                            <Menu.Item key="2">option2</Menu.Item>
-                            <Menu.Item key="3">option3</Menu.Item>
-                            <Menu.Item key="4">option4</Menu.Item>
-                        </SubMenu>
-                        <SubMenu
-                            key="sub2"
-                            title={
-                                <span>
-                                    <Icon type="laptop" />
-                                    subnav 2
-              </span>
-                            }
-                        >
-                            <Menu.Item key="5">option5</Menu.Item>
-                            <Menu.Item key="6">option6</Menu.Item>
-                            <Menu.Item key="7">option7</Menu.Item>
-                            <Menu.Item key="8">option8</Menu.Item>
-                        </SubMenu>
-                        <SubMenu
-                            key="sub3"
-                            title={
-                                <span>
-                                    <Icon type="notification" />
-                                    subnav 3
-              </span>
-                            }
-                        >
-                            <Menu.Item key="9">option9</Menu.Item>
-                            <Menu.Item key="10">option10</Menu.Item>
-                            <Menu.Item key="11">option11</Menu.Item>
-                            <Menu.Item key="12">option12</Menu.Item>
-                        </SubMenu>
-                    </Menu>
-                </Sider>
-                <Layout style={{ padding: '0 24px 24px' }}>
-                    <Breadcrumb style={{ margin: '16px 0' }}>
-                        <Breadcrumb.Item>Home</Breadcrumb.Item>
-                        <Breadcrumb.Item>List</Breadcrumb.Item>
-                        <Breadcrumb.Item>App</Breadcrumb.Item>
-                    </Breadcrumb>
-                    <Content style={{
-                        background: '#fff',
-                        padding: 24,
-                        margin: 0,
-                        minHeight: 280,
-                    }}
-                    >
-                        {loading ? <Skeleton /> : <Table dataSource={fatura} columns={columns} />
+            <DragDropContext onDragEnd={onDragEnd}>
 
-                        }
+                {/* <DragDropContext onDragEnd={onDragEnd}>
+                <Droppable droppableId="droppable">
+                    {provided => (
+                        <div
+                            ref={provided.innerRef}
+                            {...provided.droppableProps}
+                        >
+                            {fatura && fatura.map((item, index) => (
+                                <Draggable key={index.toString()} draggableId={index.toString()} index={index}>
+                                    {provided => (
+                                        <div
+                                            ref={provided.innerRef}
+                                            {...provided.draggableProps}
+                                            {...provided.dragHandleProps}>
+                                            <p style={{ backgroundColor: 'c1c1c1', padding: 10 }}>
+                                                {JSON.stringify(item)}
+                                            </p>
+                                        </div>)}
+                                </Draggable>
+                            ))}
+
+                            {provided.placeholder}
+                        </div>
+                    )}
+                </Droppable>
+            </DragDropContext> */}
+
+                <Header className="header">
+                    <div className="logo" />
+                    <Menu
+                        theme="dark"
+                        mode="horizontal"
+                        defaultSelectedKeys={['2']}
+                        style={{ lineHeight: '64px' }}
+                    >
+                        <Menu.Item key="1">nav 1</Menu.Item>
+                        <Menu.Item key="2">nav 2</Menu.Item>
+                        <Menu.Item key="3">nav 3</Menu.Item>
+                    </Menu>
+                </Header>
+                <Layout>
+
+                    <Sider>
+                        <Droppable droppableId="droppableSider">
+                            {provided => (
+                                <div
+                                    ref={provided.innerRef}
+                                    {...provided.droppableProps}>
+                                    {fatura && fatura.map((item, index) => item.fiador === '' ? (
+                                        <Draggable key={index.toString()} draggableId={index.toString()} index={index}>
+                                            {provided => (
+                                                <div
+                                                    ref={provided.innerRef}
+                                                    {...provided.draggableProps}
+                                                    {...provided.dragHandleProps}>
+                                                    <Card>
+                                                        <Row>
+                                                            {item.name}
+                                                        </Row>
+                                                        <Row>
+                                                            {item.value / 100}
+                                                        </Row>
+                                                        <Row>
+                                                            <Badge className="site-badge-count-109" count={item.date} style={{ backgroundColor: '#52c41a' }} />
+                                                        </Row>
+                                                    </Card>
+                                                </div>
+                                            )}
+                                        </Draggable>
+                                    ) : null)}
+                                    {provided.placeholder}
+                                </div>
+                            )}
+                        </Droppable>
+                    </Sider>
+                    <Layout style={{ padding: '0 24px 24px' }}>
+                        <p>{calc(fatura)}</p>
+                        <Content
+                            className="site-layout-background"
+                            style={{
+                                background: '#fff',
+                                padding: 24,
+                                margin: 0,
+                                minHeight: 280,
+                            }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                <Droppable droppableId="droppableContent1">
+                                    {provided => (
+                                        <div
+                                            ref={provided.innerRef}
+                                            {...provided.droppableProps}>
+                                            <p>{calc(fatura && fatura.filter(f => f.fiador === 'mae'))}</p>
+
+                                            <div style={{ border: '1px solid #000', width: 500, height: 500 }}>
+                                                {fatura && fatura.map((item, index) => item.fiador === 'mae' ? (
+                                                    <Draggable key={index.toString()} draggableId={index.toString()} index={index}>
+                                                        {provided => (
+                                                            <div
+                                                                ref={provided.innerRef}
+                                                                {...provided.draggableProps}
+                                                                {...provided.dragHandleProps}>
+                                                                <Card>
+                                                                    <Row>
+                                                                        {item.name}
+                                                                    </Row>
+                                                                    <Row>
+                                                                        {item.value / 100}
+                                                                    </Row>
+                                                                    <Row>
+                                                                        <Badge className="site-badge-count-109" count={item.date} style={{ backgroundColor: '#52c41a' }} />
+                                                                    </Row>
+                                                                </Card>
+                                                            </div>
+                                                        )}
+                                                    </Draggable>
+                                                ) : null)}
+                                            </div>
+                                            {/* <Table dataSource={_fatura.filter(f => f.de === 'mae')} columns={columns} /> */}
+                                            {/* {_fatura.map((item, index) => item.fiador === 'mae' ? (
+
+                                                ): null)} */}
+                                            {provided.placeholder}
+                                        </div>
+
+                                    )}
+                                </Droppable>
+                                <Droppable droppableId="droppableContent2">
+                                    {provided => (
+                                        <div
+                                            ref={provided.innerRef}
+                                            {...provided.droppableProps}>
+                                            <p>{calc(fatura && fatura.filter(f => f.fiador === 'felipe'))}</p>
+
+                                            <div style={{ border: '1px solid #000', width: 500, height: 500 }}>
+                                                {fatura && fatura.map((item, index) => item.fiador === 'felipe' ? (
+                                                    <Draggable key={index.toString()} draggableId={index.toString()} index={index}>
+                                                        {provided => (
+                                                            <div
+                                                                ref={provided.innerRef}
+                                                                {...provided.draggableProps}
+                                                                {...provided.dragHandleProps}>
+                                                                <Card>
+                                                                    <Row>
+                                                                        {item.name}
+                                                                    </Row>
+                                                                    <Row>
+                                                                        {item.value / 100}
+                                                                    </Row>
+                                                                    <Row>
+                                                                        <Badge className="site-badge-count-109" count={item.date} style={{ backgroundColor: '#52c41a' }} />
+                                                                    </Row>
+                                                                </Card>
+                                                            </div>
+                                                        )}
+                                                    </Draggable>
+                                                ) : null)}
+                                            </div>
+                                            {/* <Table dataSource={_fatura.filter(f => f.de === 'felipe')} columns={columns} /> */}
+                                            {/* {_fatura.map((item, index) => item.fiador === 'felipe' ? (
+
+                                                ): null)} */}
+                                            {provided.placeholder}
+                                        </div>
+                                    )}
+                                </Droppable>
+
+                            </div>
+                        </Content>
+
+                        {/* <Content
+                        className="site-layout-background"
+                        style={{
+                            background: '#fff',
+                            padding: 24,
+                            margin: 0,
+                            minHeight: 280,
+                        }}>
+                        {loading ? <Skeleton /> : <Table dataSource={fatura.filter(f => f.de === "")} columns={columns} />}
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <div>
+                                <Table dataSource={_fatura.filter(f => f.de === 'mae')} columns={columns} />
+                                {_fatura.map((n, index) => n.de === 'mae' ? <p>{JSON.stringify(n)}</p> : null)}
+                                <p>{calc(_fatura.filter(f => f.de === 'mae'))}</p>
+                            </div>
+                            <div>
+                                <Table dataSource={_fatura.filter(f => f.de === 'felipe')} columns={columns} />
+                                {_fatura.map((n, index) => n.de === 'felipe' ? <p>{JSON.stringify(n)}</p> : null)}
+                                <p>{calc(_fatura.filter(f => f.de === 'felipe'))}</p>
+                            </div>
+                        </div>
 
                         <Button onClick={teste}>Teste</Button>
-
-
-                    </Content>
+                    </Content> */}
+                    </Layout>
                 </Layout>
-            </Layout>
-        </Layout>
+            </DragDropContext>
 
+        </Layout >
     );
 }

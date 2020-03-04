@@ -5,6 +5,7 @@ import Axios from 'axios';
 export default function Index(props) {
     const [file, setFile] = useState('');
     const [faturas, setFaturas] = useState([]);
+    const [reload, setReload] = useState(false);
 
 
     useEffect(() => {
@@ -16,8 +17,7 @@ export default function Index(props) {
 
         getFaturas();
 
-    }, [])
-
+    }, [reload])
 
 
     function handleChange(e) {
@@ -41,7 +41,14 @@ export default function Index(props) {
             },
         });
 
+        console.log(response.data)
+
         setFaturas(faturas => ([...faturas, response.data]));
+    }
+
+    async function handleDelete(id) {
+        await Axios.delete(`http://localhost:3333/fatura/${id}`);
+        setReload(reload => !reload)
     }
 
     return (
@@ -55,6 +62,7 @@ export default function Index(props) {
             {faturas.map(f => (
                 <div key={f._id}>
                     <Button onClick={() => props.history.push('/fatura', { id: f._id })}>{f.date}</Button>
+                    <Button onClick={() => handleDelete(f._id)}>Delete</Button>
                 </div>
             ))}
 
